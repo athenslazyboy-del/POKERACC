@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PokerAccount - Realtime Sync</title>
+    <title>PokerAccount Pro - Realtime</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -21,8 +21,8 @@
                 <span class="font-bold text-xl tracking-tight">PokerAccount <span class="text-xs text-emerald-500">● Live</span></span>
             </div>
             <div class="flex items-center gap-3">
-                <button @click="exportAllDataToExcel()" class="hidden md:flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition">
-                    <span>📊 Export</span>
+                <button @click="exportAllDataToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2">
+                    <span>📊 Export Excel</span>
                 </button>
                 <input type="date" x-model="currentDate" @change="changeDate" class="border-slate-200 rounded-xl text-sm font-bold text-indigo-600 focus:ring-indigo-500 cursor-pointer shadow-sm">
             </div>
@@ -31,39 +31,28 @@
 
     <main class="max-w-7xl mx-auto px-4 py-8">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 text-center">
                 <p class="text-xs font-bold text-slate-400 uppercase mb-1">Total Buy-in</p>
                 <p class="text-3xl font-black text-slate-800" x-text="formatMoney(getTotalBuyin())"></p>
             </div>
-            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 text-center">
                 <p class="text-xs font-bold text-slate-400 uppercase mb-1">Total Cash-out</p>
                 <p class="text-3xl font-black text-slate-800" x-text="formatMoney(getTotalCashout())"></p>
             </div>
-            <div class="bg-indigo-900 p-6 rounded-3xl shadow-lg text-white">
+            <div class="bg-indigo-900 p-6 rounded-3xl shadow-lg text-white text-center">
                 <p class="text-xs font-bold text-indigo-300 uppercase mb-1">Rake (Profit)</p>
-                <input type="number" x-model.number="currentSession.rake" @input.debounce.750ms="save" class="bg-transparent border-none p-0 text-3xl font-black focus:ring-0 w-full placeholder-indigo-700" placeholder="0">
+                <input type="number" x-model.number="currentSession.rake" @input.debounce.750ms="save" class="bg-transparent border-none p-0 text-3xl font-black focus:ring-0 w-full text-center placeholder-indigo-700" placeholder="0">
             </div>
-        </div>
-
-        <div class="mb-8 p-4 rounded-2xl flex items-center justify-between border" 
-             :class="isBalanced() ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-amber-50 border-amber-200 text-amber-700'">
-            <div class="flex items-center gap-3">
-                <span class="text-xl" x-text="isBalanced() ? '✅' : '⚠️'"></span>
-                <span class="font-bold text-sm" x-text="isBalanced() ? 'สมดุลแล้ว' : 'ยอดไม่ตรงกัน'"></span>
-            </div>
-            <div class="font-mono font-bold text-lg" x-text="formatMoney(getTotalBuyin() - (getTotalCashout() + (currentSession.rake || 0)))"></div>
         </div>
 
         <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden mb-8">
-            <div class="p-6 border-b border-slate-50 flex justify-between items-center bg-white">
+            <div class="p-6 border-b border-slate-50 flex justify-between items-center">
                 <h2 class="font-black text-slate-800 uppercase text-lg">Active Players</h2>
-                <button @click="addPlayer()" class="bg-slate-900 hover:bg-indigo-600 text-white px-6 py-2 rounded-xl text-sm font-bold transition shadow-md">
-                    + Add Player
-                </button>
+                <button @click="addPlayer()" class="bg-slate-900 hover:bg-indigo-600 text-white px-6 py-2 rounded-xl text-sm font-bold transition">+ Add Player</button>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm">
-                    <thead class="bg-slate-50/50 text-slate-400 font-bold text-[10px] uppercase">
+                    <thead class="bg-slate-50 text-slate-400 font-bold text-[10px] uppercase">
                         <tr>
                             <th class="px-6 py-4">Name</th>
                             <th class="px-6 py-4">Buy-ins</th>
@@ -85,15 +74,15 @@
                                             <div class="flex items-center bg-slate-100 rounded-lg pr-1 border border-slate-200">
                                                 <input type="number" x-model.number="bi.amount" @input.debounce.750ms="save" class="bg-transparent border-none text-xs w-16 px-2 py-1 focus:ring-0 font-bold" placeholder="0">
                                                 <input type="checkbox" x-model="bi.isPaid" @change="save" class="w-3.5 h-3.5 accent-indigo-600 rounded cursor-pointer">
-                                                <button @click="removeBuyin(pIndex, bIndex)" class="text-rose-300 hover:text-rose-500 px-1">×</button>
+                                                <button @click="removeBuyin(pIndex, bIndex)" class="text-rose-400 ml-1">×</button>
                                             </div>
                                         </template>
-                                        <button @click="addBuyin(pIndex)" class="text-indigo-600 text-[10px] font-black border border-indigo-100 px-2 py-1 rounded-lg">+ Add</button>
+                                        <button @click="addBuyin(pIndex)" class="text-indigo-600 text-[10px] font-bold">+ Add</button>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 align-top text-right font-bold text-slate-500" x-text="formatMoney(sumPlayerBuyin(player))"></td>
                                 <td class="px-6 py-4 align-top text-center">
-                                    <input type="number" x-model.number="player.cashout" @input.debounce.750ms="save" class="border border-slate-200 rounded-xl px-3 py-1.5 w-24 text-center font-black" placeholder="0">
+                                    <input type="number" x-model.number="player.cashout" @input.debounce.750ms="save" class="border border-slate-200 rounded-xl px-2 py-1 w-20 text-center font-bold" placeholder="0">
                                 </td>
                                 <td class="px-6 py-4 align-top text-right font-black" :class="player.cashout - sumPlayerBuyin(player) >= 0 ? 'text-emerald-600' : 'text-rose-600'">
                                     <span x-text="formatMoney(player.cashout - sumPlayerBuyin(player))"></span>
@@ -105,18 +94,6 @@
                         </template>
                     </tbody>
                 </table>
-            </div>
-        </div>
-
-        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
-            <h3 class="font-black text-slate-800 uppercase mb-4 text-sm">Customer History (All Time)</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <template x-for="cust in getCustomerHistory()" :key="cust.name">
-                    <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex justify-between items-center">
-                        <span class="font-bold text-slate-800 text-sm" x-text="cust.name"></span>
-                        <span class="text-xs font-black" :class="cust.totalPL >= 0 ? 'text-emerald-600' : 'text-rose-600'" x-text="formatMoney(cust.totalPL)"></span>
-                    </div>
-                </template>
             </div>
         </div>
     </main>
@@ -139,7 +116,6 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // ฝังฟังก์ชันไว้ใน window เพื่อให้ AlpineJS ที่โหลดทีหลังมองเห็น
         window.pokerApp = function() {
             return {
                 currentDate: new Date().toISOString().split('T')[0],
@@ -175,7 +151,7 @@
                 },
 
                 removePlayer(index) {
-                    if(confirm('ลบผู้เล่นคนนี้?')) { 
+                    if(confirm('ลบผู้เล่น?')) { 
                         this.currentSession.players.splice(index, 1); 
                         this.save(); 
                     }
@@ -206,10 +182,6 @@
                     return this.currentSession.players.reduce((s, p) => s + (Number(p.cashout) || 0), 0); 
                 },
                 
-                isBalanced() { 
-                    return this.getTotalBuyin() === (this.getTotalCashout() + (Number(this.currentSession.rake) || 0)); 
-                },
-                
                 formatMoney(v) { return new Intl.NumberFormat('th-TH').format(v); },
 
                 getCustomerHistory() {
@@ -229,76 +201,24 @@
                 },
 
                 exportAllDataToExcel() {
-                try {
-                    // 1. เตรียมข้อมูลหน้า "สรุปรายวัน"
-                    const dailySummary = Object.keys(this.allData).map(date => {
-                        const session = this.allData[date];
-                        const players = session.players || [];
-                        const totalIn = players.reduce((sum, p) => sum + (this.sumPlayerBuyin(p) || 0), 0);
-                        const totalOut = players.reduce((sum, p) => sum + (Number(p.cashout) || 0), 0);
-                        const rake = Number(session.rake) || 0;
-                        
-                        return {
-                            "วันที่": date,
-                            "จำนวนคน": players.length + " คน",
-                            "ยอด Buy-in": totalIn,
-                            "ยอด Cash-out": totalOut,
-                            "Rake (กำไร)": rake,
-                            "ส่วนต่าง": totalIn - (totalOut + rake)
-                        };
-                    });
-
-                    // 2. เตรียมข้อมูลหน้า "ประวัติลูกค้า"
-                    const historyData = this.getCustomerHistory().map(cust => ({
-                        "อันดับ": "", // จะใส่ลำดับทีหลัง
-                        "ชื่อลูกค้า": cust.name,
-                        "กำไร/ขาดทุนรวม": cust.totalPL,
-                        "สถานะ": cust.totalPL >= 0 ? "กำไร" : "ขาดทุน"
-                    }));
-
-                    // 3. สร้าง Workbook
-                    const wb = XLSX.utils.book_new();
-                    
-                    // --- แผ่นที่ 1: รายวัน ---
-                    const ws1 = XLSX.utils.json_to_sheet(dailySummary);
-                    // กำหนดความกว้างคอลัมน์ (หน่วยเป็นตัวอักษร)
-                    ws1['!cols'] = [
-                        { wch: 15 }, // วันที่
-                        { wch: 10 }, // จำนวนคน
-                        { wch: 15 }, // Buy-in
-                        { wch: 15 }, // Cash-out
-                        { wch: 15 }, // Rake
-                        { wch: 12 }  // ส่วนต่าง
-                    ];
-                    XLSX.utils.book_append_sheet(wb, ws1, "สรุปรายวัน");
-
-                    // --- แผ่นที่ 2: ประวัติลูกค้า ---
-                    const ws2 = XLSX.utils.json_to_sheet(historyData);
-                    // ใส่ลำดับ 1, 2, 3...
-                    historyData.forEach((row, i) => {
-                        const cellAddress = XLSX.utils.encode_cell({r: i + 1, c: 0});
-                        ws2[cellAddress] = { t: 'n', v: i + 1 };
-                    });
-                    ws2['!cols'] = [
-                        { wch: 8 },  // อันดับ
-                        { wch: 20 }, // ชื่อลูกค้า
-                        { wch: 18 }, // กำไร/ขาดทุน
-                        { wch: 12 }  // สถานะ
-                    ];
-                    XLSX.utils.book_append_sheet(wb, ws2, "ประวัติลูกค้า");
-
-                    // 4. สั่ง Save ไฟล์
-                    const fileName = `PokerReport_${this.currentDate}.xlsx`;
-                    XLSX.writeFile(wb, fileName);
-
-                } catch (error) {
-                    console.error("Export Error:", error);
-                    alert("Export ไม่สำเร็จ: " + error.message);
+                    try {
+                        const daily = Object.keys(this.allData).map(d => {
+                            const s = this.allData[d];
+                            const players = s.players || [];
+                            const tIn = players.reduce((sum, p) => sum + this.sumPlayerBuyin(p), 0);
+                            const tOut = players.reduce((sum, p) => sum + (Number(p.cashout) || 0), 0);
+                            return { "วันที่": d, "คน": players.length, "Buyin": tIn, "Cashout": tOut, "Rake": s.rake || 0 };
+                        });
+                        const wb = XLSX.utils.book_new();
+                        const ws1 = XLSX.utils.json_to_sheet(daily);
+                        ws1['!cols'] = [{ wch: 15 }, { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
+                        XLSX.utils.book_append_sheet(wb, ws1, "Summary");
+                        XLSX.writeFile(wb, `Poker_Report_${this.currentDate}.xlsx`);
+                    } catch (e) { alert("Export Error"); }
                 }
-            }
+            };
         }
     </script>
-
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 </body>
 </html>
