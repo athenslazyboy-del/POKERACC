@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Poker Management Pro - Realtime</title>
+    <title>PokerAccount - Realtime Sync</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         [x-cloak] { display: none !important; }
@@ -13,17 +12,17 @@
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     </style>
 </head>
-<body class="bg-[#f8fafc] min-h-screen font-sans text-slate-900" x-data="pokerApp" x-init="init()">
+<body class="bg-[#f8fafc] min-h-screen font-sans text-slate-900" x-data="pokerApp()" x-init="init()">
 
     <nav class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
         <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
             <div class="flex items-center gap-2">
                 <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">P</div>
-                <span class="font-bold text-xl tracking-tight">PokerAccount <span class="text-xs text-emerald-500">● Realtime</span></span>
+                <span class="font-bold text-xl tracking-tight">PokerAccount <span class="text-xs text-emerald-500">● Live</span></span>
             </div>
             <div class="flex items-center gap-3">
-                <button @click="exportAllDataToExcel()" class="hidden md:flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition shadow-sm">
-                    <span>📊 Export Excel</span>
+                <button @click="exportAllDataToExcel()" class="hidden md:flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition">
+                    <span>📊 Export</span>
                 </button>
                 <input type="date" x-model="currentDate" @change="changeDate" class="border-slate-200 rounded-xl text-sm font-bold text-indigo-600 focus:ring-indigo-500 cursor-pointer shadow-sm">
             </div>
@@ -32,17 +31,17 @@
 
     <main class="max-w-7xl mx-auto px-4 py-8">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 relative overflow-hidden">
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
                 <p class="text-xs font-bold text-slate-400 uppercase mb-1">Total Buy-in</p>
                 <p class="text-3xl font-black text-slate-800" x-text="formatMoney(getTotalBuyin())"></p>
             </div>
-            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 relative overflow-hidden">
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
                 <p class="text-xs font-bold text-slate-400 uppercase mb-1">Total Cash-out</p>
                 <p class="text-3xl font-black text-slate-800" x-text="formatMoney(getTotalCashout())"></p>
             </div>
             <div class="bg-indigo-900 p-6 rounded-3xl shadow-lg text-white">
                 <p class="text-xs font-bold text-indigo-300 uppercase mb-1">Rake (Profit)</p>
-                <input type="number" x-model.number="currentSession.rake" @input.debounce.500ms="save" class="bg-transparent border-none p-0 text-3xl font-black focus:ring-0 w-full placeholder-indigo-700" placeholder="0">
+                <input type="number" x-model.number="currentSession.rake" @input.debounce.750ms="save" class="bg-transparent border-none p-0 text-3xl font-black focus:ring-0 w-full placeholder-indigo-700" placeholder="0">
             </div>
         </div>
 
@@ -50,218 +49,195 @@
              :class="isBalanced() ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-amber-50 border-amber-200 text-amber-700'">
             <div class="flex items-center gap-3">
                 <span class="text-xl" x-text="isBalanced() ? '✅' : '⚠️'"></span>
-                <span class="font-bold text-sm" x-text="isBalanced() ? 'ยอดเงินสดและชิปสมดุล' : 'ยอดเงินไม่สมดุล (Audit Fail)'"></span>
+                <span class="font-bold text-sm" x-text="isBalanced() ? 'สมดุลแล้ว' : 'ยอดไม่ตรงกัน'"></span>
             </div>
             <div class="font-mono font-bold text-lg" x-text="formatMoney(getTotalBuyin() - (getTotalCashout() + (currentSession.rake || 0)))"></div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            <div class="lg:col-span-3">
-                <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-                    <div class="p-6 border-b border-slate-50 flex justify-between items-center bg-white">
-                        <h2 class="font-black text-slate-800 uppercase text-lg">Active Players</h2>
-                        <button @click="addPlayer()" class="bg-slate-900 hover:bg-indigo-600 text-white px-6 py-2 rounded-xl text-sm font-bold transition shadow-md">
-                            + Add Player
-                        </button>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-sm">
-                            <thead class="bg-slate-50/50 text-slate-400 font-bold text-[10px] uppercase">
-                                <tr>
-                                    <th class="px-6 py-4">Name</th>
-                                    <th class="px-6 py-4">Buy-ins</th>
-                                    <th class="px-6 py-4 text-right">Total</th>
-                                    <th class="px-6 py-4 text-center">Cash-out</th>
-                                    <th class="px-6 py-4 text-right">P/L</th>
-                                    <th class="px-6 py-4"></th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-50">
-                                <template x-for="(player, pIndex) in currentSession.players" :key="pIndex">
-                                    <tr class="hover:bg-slate-50/50 group">
-                                        <td class="px-6 py-4 align-top">
-                                            <input type="text" x-model="player.name" @input.debounce.500ms="save" class="font-bold border-none p-0 focus:ring-0 bg-transparent w-full text-slate-700" placeholder="Enter Name">
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <div class="flex flex-wrap gap-2">
-                                                <template x-for="(bi, bIndex) in player.buyins" :key="bIndex">
-                                                    <div class="flex items-center bg-slate-100 rounded-lg pr-1 border border-slate-200">
-                                                        <input type="number" x-model.number="bi.amount" @input.debounce.500ms="save" class="bg-transparent border-none text-xs w-16 px-2 py-1 focus:ring-0 font-bold" placeholder="0">
-                                                        <input type="checkbox" x-model="bi.isPaid" @change="save" class="w-3.5 h-3.5 accent-indigo-600 rounded cursor-pointer">
-                                                        <button @click="removeBuyin(pIndex, bIndex)" class="text-rose-300 hover:text-rose-500 px-1">×</button>
-                                                    </div>
-                                                </template>
-                                                <button @click="addBuyin(pIndex)" class="text-indigo-600 text-[10px] font-black border border-indigo-100 px-2 py-1 rounded-lg">+ Add</button>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4 align-top text-right font-bold text-slate-500" x-text="formatMoney(sumPlayerBuyin(player))"></td>
-                                        <td class="px-6 py-4 align-top text-center">
-                                            <input type="number" x-model.number="player.cashout" @input.debounce.500ms="save" class="border border-slate-200 rounded-xl px-3 py-1.5 w-24 text-center font-black" placeholder="0">
-                                        </td>
-                                        <td class="px-6 py-4 align-top text-right font-black" :class="player.cashout - sumPlayerBuyin(player) >= 0 ? 'text-emerald-600' : 'text-rose-600'">
-                                            <span x-text="formatMoney(player.cashout - sumPlayerBuyin(player))"></span>
-                                        </td>
-                                        <td class="px-6 py-4 align-top text-center">
-                                            <button @click="removePlayer(pIndex)" class="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100">🗑️</button>
-                                        </td>
-                                    </tr>
-                                </template>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden mb-8">
+            <div class="p-6 border-b border-slate-50 flex justify-between items-center bg-white">
+                <h2 class="font-black text-slate-800 uppercase text-lg">Active Players</h2>
+                <button @click="addPlayer()" class="bg-slate-900 hover:bg-indigo-600 text-white px-6 py-2 rounded-xl text-sm font-bold transition shadow-md">
+                    + Add Player
+                </button>
             </div>
-
-            <div class="lg:col-span-1">
-                <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 sticky top-24">
-                    <h3 class="font-black text-slate-800 uppercase mb-4 text-sm">Customer Records</h3>
-                    <div class="space-y-4 max-h-[600px] overflow-y-auto pr-2">
-                        <template x-for="cust in getCustomerHistory()" :key="cust.name">
-                            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex justify-between items-center">
-                                <div>
-                                    <p class="font-bold text-slate-800 text-sm" x-text="cust.name"></p>
-                                    <p class="text-[10px] text-slate-400 font-bold uppercase" x-text="cust.sessions + ' Sessions'"></p>
-                                </div>
-                                <div class="text-right">
-                                    <p class="text-xs font-black" :class="cust.totalPL >= 0 ? 'text-emerald-600' : 'text-rose-600'" x-text="formatMoney(cust.totalPL)"></p>
-                                </div>
-                            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-slate-50/50 text-slate-400 font-bold text-[10px] uppercase">
+                        <tr>
+                            <th class="px-6 py-4">Name</th>
+                            <th class="px-6 py-4">Buy-ins</th>
+                            <th class="px-6 py-4 text-right">Total</th>
+                            <th class="px-6 py-4 text-center">Cash-out</th>
+                            <th class="px-6 py-4 text-right">P/L</th>
+                            <th class="px-6 py-4"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">
+                        <template x-for="(player, pIndex) in currentSession.players" :key="pIndex">
+                            <tr class="hover:bg-slate-50/50 group">
+                                <td class="px-6 py-4 align-top">
+                                    <input type="text" x-model="player.name" @input.debounce.750ms="save" class="font-bold border-none p-0 focus:ring-0 bg-transparent w-full text-slate-700" placeholder="Name">
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex flex-wrap gap-2">
+                                        <template x-for="(bi, bIndex) in player.buyins" :key="bIndex">
+                                            <div class="flex items-center bg-slate-100 rounded-lg pr-1 border border-slate-200">
+                                                <input type="number" x-model.number="bi.amount" @input.debounce.750ms="save" class="bg-transparent border-none text-xs w-16 px-2 py-1 focus:ring-0 font-bold" placeholder="0">
+                                                <input type="checkbox" x-model="bi.isPaid" @change="save" class="w-3.5 h-3.5 accent-indigo-600 rounded cursor-pointer">
+                                                <button @click="removeBuyin(pIndex, bIndex)" class="text-rose-300 hover:text-rose-500 px-1">×</button>
+                                            </div>
+                                        </template>
+                                        <button @click="addBuyin(pIndex)" class="text-indigo-600 text-[10px] font-black border border-indigo-100 px-2 py-1 rounded-lg">+ Add</button>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 align-top text-right font-bold text-slate-500" x-text="formatMoney(sumPlayerBuyin(player))"></td>
+                                <td class="px-6 py-4 align-top text-center">
+                                    <input type="number" x-model.number="player.cashout" @input.debounce.750ms="save" class="border border-slate-200 rounded-xl px-3 py-1.5 w-24 text-center font-black" placeholder="0">
+                                </td>
+                                <td class="px-6 py-4 align-top text-right font-black" :class="player.cashout - sumPlayerBuyin(player) >= 0 ? 'text-emerald-600' : 'text-rose-600'">
+                                    <span x-text="formatMoney(player.cashout - sumPlayerBuyin(player))"></span>
+                                </td>
+                                <td class="px-6 py-4 align-top text-center">
+                                    <button @click="removePlayer(pIndex)" class="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition">🗑️</button>
+                                </td>
+                            </tr>
                         </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
+            <h3 class="font-black text-slate-800 uppercase mb-4 text-sm">Customer History (All Time)</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <template x-for="cust in getCustomerHistory()" :key="cust.name">
+                    <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex justify-between items-center">
+                        <span class="font-bold text-slate-800 text-sm" x-text="cust.name"></span>
+                        <span class="text-xs font-black" :class="cust.totalPL >= 0 ? 'text-emerald-600' : 'text-rose-600'" x-text="formatMoney(cust.totalPL)"></span>
                     </div>
-                </div>
+                </template>
             </div>
         </div>
     </main>
 
-   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyBLH6kay1-t5PLolNPzoRRT28WxJOs4jV8",
-        authDomain: "pokeracc-b7732.firebaseapp.com",
-        databaseURL: "https://pokeracc-b7732-default-rtdb.asia-southeast1.firebasedatabase.app",
-        projectId: "pokeracc-b7732",
-        storageBucket: "pokeracc-b7732.firebasestorage.app",
-        messagingSenderId: "454101305838",
-        appId: "1:454101305838:web:fa54b85d616a2ca8eaa6ff",
-        measurementId: "G-8BRPSXWQTE"
-    };
+        const firebaseConfig = {
+            apiKey: "AIzaSyBLH6kay1-t5PLolNPzoRRT28WxJOs4jV8",
+            authDomain: "pokeracc-b7732.firebaseapp.com",
+            databaseURL: "https://pokeracc-b7732-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "pokeracc-b7732",
+            storageBucket: "pokeracc-b7732.firebasestorage.app",
+            messagingSenderId: "454101305838",
+            appId: "1:454101305838:web:fa54b85d616a2ca8eaa6ff",
+            measurementId: "G-8BRPSXWQTE"
+        };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
 
-    // แก้ไขตรงนี้: ใช้คำสั่ง alpine:init เพื่อให้ Alpinejs รู้จัก pokerApp แน่นอน
-    document.addEventListener('alpine:init', () => {
-        Alpine.data('pokerApp', () => ({
-            currentDate: new Date().toISOString().split('T')[0],
-            allData: {},
-            currentSession: { players: [], rake: 0 },
+        // ฝังฟังก์ชันไว้ใน window เพื่อให้ AlpineJS ที่โหลดทีหลังมองเห็น
+        window.pokerApp = function() {
+            return {
+                currentDate: new Date().toISOString().split('T')[0],
+                allData: {},
+                currentSession: { players: [], rake: 0 },
 
-            init() {
-                const dbRef = ref(db, 'poker_db');
-                onValue(dbRef, (snapshot) => {
-                    const data = snapshot.val();
-                    if (data) {
-                        this.allData = data;
-                        this.loadSession();
-                    }
-                });
-            },
-
-            loadSession() {
-                this.currentSession = this.allData[this.currentDate] || { players: [], rake: 0 };
-            },
-
-            changeDate() { 
-                this.loadSession(); 
-            },
-
-            save() {
-                // คัดลอกข้อมูลปัจจุบันลงใน allData
-                this.allData[this.currentDate] = JSON.parse(JSON.stringify(this.currentSession));
-                // ส่งขึ้น Firebase
-                set(ref(db, 'poker_db'), this.allData);
-            },
-
-            addPlayer() {
-                if (!this.currentSession.players) this.currentSession.players = [];
-                this.currentSession.players.push({ name: '', buyins: [{ amount: 0, isPaid: false }], cashout: 0 });
-                this.save();
-            },
-
-            removePlayer(index) {
-                if(confirm('Remove this player?')) { 
-                    this.currentSession.players.splice(index, 1); 
-                    this.save(); 
-                }
-            },
-
-            addBuyin(pIdx) {
-                this.currentSession.players[pIdx].buyins.push({ amount: 0, isPaid: false });
-                this.save();
-            },
-
-            removeBuyin(pIdx, bIdx) {
-                this.currentSession.players[pIdx].buyins.splice(bIdx, 1);
-                this.save();
-            },
-
-            sumPlayerBuyin(p) { 
-                if (!p.buyins) return 0;
-                return p.buyins.reduce((s, b) => s + (Number(b.amount) || 0), 0); 
-            },
-            
-            getTotalBuyin() { 
-                if (!this.currentSession.players) return 0;
-                return this.currentSession.players.reduce((s, p) => s + this.sumPlayerBuyin(p), 0); 
-            },
-            
-            getTotalCashout() { 
-                if (!this.currentSession.players) return 0;
-                return this.currentSession.players.reduce((s, p) => s + (Number(p.cashout) || 0), 0); 
-            },
-            
-            isBalanced() { 
-                return this.getTotalBuyin() === (this.getTotalCashout() + (Number(this.currentSession.rake) || 0)); 
-            },
-            
-            formatMoney(v) { return new Intl.NumberFormat('th-TH').format(v); },
-
-            getCustomerHistory() {
-                const history = {};
-                Object.values(this.allData).forEach(session => {
-                    if (!session || !session.players) return;
-                    session.players.forEach(p => {
-                        if (!p.name) return;
-                        const name = p.name.trim();
-                        const pBuyin = this.sumPlayerBuyin(p);
-                        const pPL = (Number(p.cashout) || 0) - pBuyin;
-                        if (!history[name]) history[name] = { name: name, sessions: 0, totalBuyin: 0, totalPL: 0 };
-                        history[name].sessions += 1;
-                        history[name].totalBuyin += pBuyin;
-                        history[name].totalPL += pPL;
+                init() {
+                    const dbRef = ref(db, 'poker_db');
+                    onValue(dbRef, (snapshot) => {
+                        const data = snapshot.val();
+                        if (data) {
+                            this.allData = data;
+                            this.loadSession();
+                        }
                     });
-                });
-                return Object.values(history).sort((a, b) => b.totalPL - a.totalPL);
-            },
+                },
 
-            exportAllDataToExcel() {
-                const wb = XLSX.utils.book_new();
-                const dailySummary = Object.keys(this.allData).map(date => {
-                    const session = this.allData[date];
-                    const totalIn = session.players ? session.players.reduce((sum, p) => sum + this.sumPlayerBuyin(p), 0) : 0;
-                    const totalOut = session.players ? session.players.reduce((sum, p) => sum + (Number(p.cashout) || 0), 0) : 0;
-                    return {
-                        "วันที่": date, "Total Buy-in": totalIn, "Total Cash-out": totalOut, "Rake": session.rake || 0
-                    };
-                });
-                const ws = XLSX.utils.json_to_sheet(dailySummary);
-                XLSX.utils.book_append_sheet(wb, ws, "Daily Summary");
-                XLSX.writeFile(wb, "Poker_Data.xlsx");
-            }
-        }));
-    });
-</script>
+                loadSession() {
+                    this.currentSession = this.allData[this.currentDate] || { players: [], rake: 0 };
+                },
+
+                changeDate() { this.loadSession(); },
+
+                save() {
+                    this.allData[this.currentDate] = JSON.parse(JSON.stringify(this.currentSession));
+                    set(ref(db, 'poker_db'), this.allData);
+                },
+
+                addPlayer() {
+                    if (!this.currentSession.players) this.currentSession.players = [];
+                    this.currentSession.players.push({ name: '', buyins: [{ amount: 0, isPaid: false }], cashout: 0 });
+                    this.save();
+                },
+
+                removePlayer(index) {
+                    if(confirm('ลบผู้เล่นคนนี้?')) { 
+                        this.currentSession.players.splice(index, 1); 
+                        this.save(); 
+                    }
+                },
+
+                addBuyin(pIdx) {
+                    this.currentSession.players[pIdx].buyins.push({ amount: 0, isPaid: false });
+                    this.save();
+                },
+
+                removeBuyin(pIdx, bIdx) {
+                    this.currentSession.players[pIdx].buyins.splice(bIdx, 1);
+                    this.save();
+                },
+
+                sumPlayerBuyin(p) { 
+                    if (!p.buyins) return 0;
+                    return p.buyins.reduce((s, b) => s + (Number(b.amount) || 0), 0); 
+                },
+                
+                getTotalBuyin() { 
+                    if (!this.currentSession.players) return 0;
+                    return this.currentSession.players.reduce((s, p) => s + this.sumPlayerBuyin(p), 0); 
+                },
+                
+                getTotalCashout() { 
+                    if (!this.currentSession.players) return 0;
+                    return this.currentSession.players.reduce((s, p) => s + (Number(p.cashout) || 0), 0); 
+                },
+                
+                isBalanced() { 
+                    return this.getTotalBuyin() === (this.getTotalCashout() + (Number(this.currentSession.rake) || 0)); 
+                },
+                
+                formatMoney(v) { return new Intl.NumberFormat('th-TH').format(v); },
+
+                getCustomerHistory() {
+                    const history = {};
+                    Object.values(this.allData).forEach(session => {
+                        if (!session || !session.players) return;
+                        session.players.forEach(p => {
+                            if (!p.name) return;
+                            const name = p.name.trim();
+                            const pBuyin = this.sumPlayerBuyin(p);
+                            const pPL = (Number(p.cashout) || 0) - pBuyin;
+                            if (!history[name]) history[name] = { name: name, totalPL: 0 };
+                            history[name].totalPL += pPL;
+                        });
+                    });
+                    return Object.values(history).sort((a, b) => b.totalPL - a.totalPL);
+                },
+
+                exportAllDataToExcel() {
+                    const ws = XLSX.utils.json_to_sheet(Object.keys(this.allData).map(d => ({ Date: d, Rake: this.allData[d].rake })));
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, "History");
+                    XLSX.writeFile(wb, "PokerData.xlsx");
+                }
+            };
+        }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 </body>
 </html>
