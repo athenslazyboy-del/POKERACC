@@ -5,14 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Buy-in Form - PokerAccount</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body class="bg-slate-50 min-h-screen flex items-center justify-center p-4">
+<body class="bg-slate-50 min-h-screen flex items-center justify-center p-4" x-data="customerForm()">
 
-    <div class="bg-white w-full max-w-md rounded-3xl shadow-xl overflow-hidden border border-slate-100" x-data="customerForm()">
+    <div class="bg-white w-full max-w-md rounded-3xl shadow-xl overflow-hidden border border-slate-100">
         <div class="bg-indigo-600 p-8 text-white text-center">
-            <h1 class="text-2xl font-black mb-2">POKER BUY-IN</h1>
-            <p class="text-indigo-100 text-sm">กรอกข้อมูลเพื่อแลกชิป</p>
+            <h1 class="text-2xl font-black mb-2 tracking-tighter">POKER BUY-IN</h1>
+            <p class="text-indigo-100 text-sm">กรอกข้อมูลเพื่อแลกชิป / Fill to buy chips</p>
         </div>
 
         <div class="p-8 space-y-6">
@@ -23,30 +22,29 @@
 
             <div>
                 <label class="block text-xs font-bold text-slate-400 uppercase mb-2">ยอด Buy-in / Amount</label>
-                <input type="number" x-model.number="formData.amount" placeholder="0.00" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 focus:border-indigo-500 outline-none font-black text-2xl text-indigo-600 transition-all">
+                <input type="number" x-model.number="formData.amount" placeholder="0.00" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 focus:border-indigo-500 outline-none font-black text-2xl text-indigo-600">
             </div>
 
             <div class="bg-indigo-50 rounded-2xl p-4 text-center border-2 border-dashed border-indigo-200">
-                <p class="text-[10px] font-bold text-indigo-400 uppercase mb-2">Scan QR เพื่อโอนเงิน</p>
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=YOUR_PROMPTPAY_ID" class="mx-auto rounded-lg shadow-sm mb-2">
-                <p class="text-xs text-slate-500 italic">*หากเป็นเงินสด ให้ข้ามการอัปโหลดสลิปแล้วแจ้งพนักงาน</p>
+                <p class="text-[10px] font-bold text-indigo-400 uppercase mb-2 italic">หากโอนเงิน กรุณาแนบสลิปด้านล่าง</p>
+                <p class="text-xs text-slate-500 font-bold underline">กรณีเงินสด: แจ้งพนักงานโดยตรง</p>
             </div>
 
             <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">อัปโหลดสลิป (ถ้ามี)</label>
-                <input type="file" @change="handleFileUpload" accept="image/*" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2 font-black">แนบรูปสลิป (ถ้ามี)</label>
+                <input type="file" @change="handleFileUpload" accept="image/*" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 cursor-pointer">
             </div>
 
-            <button @click="submitForm" :disabled="loading" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 rounded-2xl shadow-lg shadow-indigo-100 transition-all active:scale-95 disabled:opacity-50">
+            <button @click="submitForm()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 rounded-2xl shadow-lg transition-all active:scale-95">
                 <span x-show="!loading">ส่งข้อมูล (Submit)</span>
-                <span x-show="loading">กำลังส่ง...</span>
+                <span x-show="loading" x-cloak>กำลังส่ง...</span>
             </button>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, push, set, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBLH6kay1-t5PLolNPzoRRT28WxJOs4jV8",
@@ -64,50 +62,64 @@
         window.customerForm = function() {
             return {
                 loading: false,
-                formData: {
-                    name: '',
-                    amount: '',
-                    slip: null,
-                    date: new Date().toISOString().split('T')[0]
-                },
+                formData: { name: '', amount: '', slip: null },
+                
                 handleFileUpload(e) {
                     const file = e.target.files[0];
+                    if (!file) return;
                     const reader = new FileReader();
-                    reader.onloadend = () => {
-                        this.formData.slip = reader.result; // แปลงรูปเป็นข้อความ Base64
-                    };
+                    reader.onloadend = () => { this.formData.slip = reader.result; };
                     reader.readAsDataURL(file);
                 },
+
                 async submitForm() {
                     if (!this.formData.name || !this.formData.amount) {
-                        alert("กรุณากรอกชื่อและยอดเงิน");
+                        alert("กรุณากรอกชื่อและยอดเงินให้ครบถ้วน");
                         return;
                     }
 
                     this.loading = true;
                     try {
-                        const date = this.formData.date;
+                        const date = new Date().toISOString().split('T')[0];
                         const dbRef = ref(db, `poker_db/${date}/players`);
                         
-                        // ดึงข้อมูลปัจจุบันมาดูว่ามีใครอยู่แล้วบ้าง
                         const snapshot = await get(dbRef);
                         let players = snapshot.val() || [];
 
-                        // เพิ่มข้อมูลลูกค้าใหม่เข้าไปในลิสต์
-                        players.push({
-                            name: this.formData.name,
-                            buyins: [{ amount: Number(this.formData.amount), isPaid: false, slip: this.formData.slip || 'Cash' }],
-                            cashout: 0
-                        });
+                        // ตรวจสอบว่ามีชื่อนี้อยู่ในระบบหรือยัง
+                        let existingPlayer = players.find(p => p.name.trim() === this.formData.name.trim());
 
-                        await set(ref(db, `poker_db/${date}/players`), players);
+                        if (existingPlayer) {
+                            // ถ้ามีชื่อเดิม ให้เพิ่มยอด Buy-in เข้าไปในรายการที่มีอยู่
+                            if (!existingPlayer.buyins) existingPlayer.buyins = [];
+                            existingPlayer.buyins.push({
+                                amount: Number(this.formData.amount),
+                                isPaid: false,
+                                slip: this.formData.slip || 'Cash'
+                            });
+                        } else {
+                            // ถ้าเป็นคนใหม่ ให้สร้างข้อมูลใหม่
+                            players.push({
+                                name: this.formData.name,
+                                buyins: [{
+                                    amount: Number(this.formData.amount),
+                                    isPaid: false,
+                                    slip: this.formData.slip || 'Cash'
+                                }],
+                                cashout: 0
+                            });
+                        }
+
+                        await set(dbRef, players);
+                        alert("ส่งข้อมูลสำเร็จ! กรุณารอพนักงานยืนยันชิปของคุณ");
                         
-                        alert("ส่งข้อมูลสำเร็จ! กรุณารอพนักงานยืนยัน");
+                        // ล้างฟอร์ม
                         this.formData.name = '';
                         this.formData.amount = '';
                         this.formData.slip = null;
+                        
                     } catch (e) {
-                        alert("เกิดข้อผิดพลาด: " + e.message);
+                        alert("Error: " + e.message);
                     } finally {
                         this.loading = false;
                     }
@@ -115,5 +127,6 @@
             }
         }
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 </body>
 </html>
