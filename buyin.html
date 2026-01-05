@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buy-in Form - PokerAccount</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-slate-50 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white w-full max-w-md rounded-3xl shadow-xl overflow-hidden border border-slate-100" x-data="customerForm()">
+        <div class="bg-indigo-600 p-8 text-white text-center">
+            <h1 class="text-2xl font-black mb-2">POKER BUY-IN</h1>
+            <p class="text-indigo-100 text-sm">กรอกข้อมูลเพื่อแลกชิป</p>
+        </div>
+
+        <div class="p-8 space-y-6">
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">ชื่อลูกค้า / Name</label>
+                <input type="text" x-model="formData.name" placeholder="ระบุชื่อของคุณ" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 focus:border-indigo-500 outline-none font-bold transition-all">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">ยอด Buy-in / Amount</label>
+                <input type="number" x-model.number="formData.amount" placeholder="0.00" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 focus:border-indigo-500 outline-none font-black text-2xl text-indigo-600 transition-all">
+            </div>
+
+            <div class="bg-indigo-50 rounded-2xl p-4 text-center border-2 border-dashed border-indigo-200">
+                <p class="text-[10px] font-bold text-indigo-400 uppercase mb-2">Scan QR เพื่อโอนเงิน</p>
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=YOUR_PROMPTPAY_ID" class="mx-auto rounded-lg shadow-sm mb-2">
+                <p class="text-xs text-slate-500 italic">*หากเป็นเงินสด ให้ข้ามการอัปโหลดสลิปแล้วแจ้งพนักงาน</p>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">อัปโหลดสลิป (ถ้ามี)</label>
+                <input type="file" @change="handleFileUpload" accept="image/*" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
+            </div>
+
+            <button @click="submitForm" :disabled="loading" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 rounded-2xl shadow-lg shadow-indigo-100 transition-all active:scale-95 disabled:opacity-50">
+                <span x-show="!loading">ส่งข้อมูล (Submit)</span>
+                <span x-show="loading">กำลังส่ง...</span>
+            </button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, push, set, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBLH6kay1-t5PLolNPzoRRT28WxJOs4jV8",
+            authDomain: "pokeracc-b7732.firebaseapp.com",
+            databaseURL: "https://pokeracc-b7732-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "pokeracc-b7732",
+            storageBucket: "pokeracc-b7732.firebasestorage.app",
+            messagingSenderId: "454101305838",
+            appId: "1:454101305838:web:fa54b85d616a2ca8eaa6ff"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        window.customerForm = function() {
+            return {
+                loading: false,
+                formData: {
+                    name: '',
+                    amount: '',
+                    slip: null,
+                    date: new Date().toISOString().split('T')[0]
+                },
+                handleFileUpload(e) {
+                    const file = e.target.files[0];
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        this.formData.slip = reader.result; // แปลงรูปเป็นข้อความ Base64
+                    };
+                    reader.readAsDataURL(file);
+                },
+                async submitForm() {
+                    if (!this.formData.name || !this.formData.amount) {
+                        alert("กรุณากรอกชื่อและยอดเงิน");
+                        return;
+                    }
+
+                    this.loading = true;
+                    try {
+                        const date = this.formData.date;
+                        const dbRef = ref(db, `poker_db/${date}/players`);
+                        
+                        // ดึงข้อมูลปัจจุบันมาดูว่ามีใครอยู่แล้วบ้าง
+                        const snapshot = await get(dbRef);
+                        let players = snapshot.val() || [];
+
+                        // เพิ่มข้อมูลลูกค้าใหม่เข้าไปในลิสต์
+                        players.push({
+                            name: this.formData.name,
+                            buyins: [{ amount: Number(this.formData.amount), isPaid: false, slip: this.formData.slip || 'Cash' }],
+                            cashout: 0
+                        });
+
+                        await set(ref(db, `poker_db/${date}/players`), players);
+                        
+                        alert("ส่งข้อมูลสำเร็จ! กรุณารอพนักงานยืนยัน");
+                        this.formData.name = '';
+                        this.formData.amount = '';
+                        this.formData.slip = null;
+                    } catch (e) {
+                        alert("เกิดข้อผิดพลาด: " + e.message);
+                    } finally {
+                        this.loading = false;
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
