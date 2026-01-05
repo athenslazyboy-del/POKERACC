@@ -229,12 +229,73 @@
                 },
 
                 exportAllDataToExcel() {
-                    const ws = XLSX.utils.json_to_sheet(Object.keys(this.allData).map(d => ({ Date: d, Rake: this.allData[d].rake })));
+                try {
+                    // 1. เตรียมข้อมูลหน้า "สรุปรายวัน"
+                    const dailySummary = Object.keys(this.allData).map(date => {
+                        const session = this.allData[date];
+                        const players = session.players || [];
+                        const totalIn = players.reduce((sum, p) => sum + (this.sumPlayerBuyin(p) || 0), 0);
+                        const totalOut = players.reduce((sum, p) => sum + (Number(p.cashout) || 0), 0);
+                        const rake = Number(session.rake) || 0;
+                        
+                        return {
+                            "วันที่": date,
+                            "จำนวนคน": players.length + " คน",
+                            "ยอด Buy-in": totalIn,
+                            "ยอด Cash-out": totalOut,
+                            "Rake (กำไร)": rake,
+                            "ส่วนต่าง": totalIn - (totalOut + rake)
+                        };
+                    });
+
+                    // 2. เตรียมข้อมูลหน้า "ประวัติลูกค้า"
+                    const historyData = this.getCustomerHistory().map(cust => ({
+                        "อันดับ": "", // จะใส่ลำดับทีหลัง
+                        "ชื่อลูกค้า": cust.name,
+                        "กำไร/ขาดทุนรวม": cust.totalPL,
+                        "สถานะ": cust.totalPL >= 0 ? "กำไร" : "ขาดทุน"
+                    }));
+
+                    // 3. สร้าง Workbook
                     const wb = XLSX.utils.book_new();
-                    XLSX.utils.book_append_sheet(wb, ws, "History");
-                    XLSX.writeFile(wb, "PokerData.xlsx");
+                    
+                    // --- แผ่นที่ 1: รายวัน ---
+                    const ws1 = XLSX.utils.json_to_sheet(dailySummary);
+                    // กำหนดความกว้างคอลัมน์ (หน่วยเป็นตัวอักษร)
+                    ws1['!cols'] = [
+                        { wch: 15 }, // วันที่
+                        { wch: 10 }, // จำนวนคน
+                        { wch: 15 }, // Buy-in
+                        { wch: 15 }, // Cash-out
+                        { wch: 15 }, // Rake
+                        { wch: 12 }  // ส่วนต่าง
+                    ];
+                    XLSX.utils.book_append_sheet(wb, ws1, "สรุปรายวัน");
+
+                    // --- แผ่นที่ 2: ประวัติลูกค้า ---
+                    const ws2 = XLSX.utils.json_to_sheet(historyData);
+                    // ใส่ลำดับ 1, 2, 3...
+                    historyData.forEach((row, i) => {
+                        const cellAddress = XLSX.utils.encode_cell({r: i + 1, c: 0});
+                        ws2[cellAddress] = { t: 'n', v: i + 1 };
+                    });
+                    ws2['!cols'] = [
+                        { wch: 8 },  // อันดับ
+                        { wch: 20 }, // ชื่อลูกค้า
+                        { wch: 18 }, // กำไร/ขาดทุน
+                        { wch: 12 }  // สถานะ
+                    ];
+                    XLSX.utils.book_append_sheet(wb, ws2, "ประวัติลูกค้า");
+
+                    // 4. สั่ง Save ไฟล์
+                    const fileName = `PokerReport_${this.currentDate}.xlsx`;
+                    XLSX.writeFile(wb, fileName);
+
+                } catch (error) {
+                    console.error("Export Error:", error);
+                    alert("Export ไม่สำเร็จ: " + error.message);
                 }
-            };
+            }
         }
     </script>
 
