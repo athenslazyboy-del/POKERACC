@@ -133,26 +133,27 @@
         </div>
     </main>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+   <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyBLH6kay1-t5PLolNPzoRRT28WxJOs4jV8",
-            authDomain: "pokeracc-b7732.firebaseapp.com",
-            databaseURL: "https://pokeracc-b7732-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "pokeracc-b7732",
-            storageBucket: "pokeracc-b7732.firebasestorage.app",
-            messagingSenderId: "454101305838",
-            appId: "1:454101305838:web:fa54b85d616a2ca8eaa6ff",
-            measurementId: "G-8BRPSXWQTE"
-        };
+    const firebaseConfig = {
+        apiKey: "AIzaSyBLH6kay1-t5PLolNPzoRRT28WxJOs4jV8",
+        authDomain: "pokeracc-b7732.firebaseapp.com",
+        databaseURL: "https://pokeracc-b7732-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "pokeracc-b7732",
+        storageBucket: "pokeracc-b7732.firebasestorage.app",
+        messagingSenderId: "454101305838",
+        appId: "1:454101305838:web:fa54b85d616a2ca8eaa6ff",
+        measurementId: "G-8BRPSXWQTE"
+    };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-        // เชื่อมฟังก์ชันเข้ากับหน้าต่าง Window เพื่อให้ Alpine.js เรียกได้
-        window.pokerApp = {
+    // แก้ไขตรงนี้: ใช้คำสั่ง alpine:init เพื่อให้ Alpinejs รู้จัก pokerApp แน่นอน
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('pokerApp', () => ({
             currentDate: new Date().toISOString().split('T')[0],
             allData: {},
             currentSession: { players: [], rake: 0 },
@@ -177,8 +178,9 @@
             },
 
             save() {
-                // อัปเดตข้อมูลก้อนปัจจุบันลงใน allData แล้วยิงขึ้น Firebase
+                // คัดลอกข้อมูลปัจจุบันลงใน allData
                 this.allData[this.currentDate] = JSON.parse(JSON.stringify(this.currentSession));
+                // ส่งขึ้น Firebase
                 set(ref(db, 'poker_db'), this.allData);
             },
 
@@ -255,10 +257,11 @@
                     };
                 });
                 const ws = XLSX.utils.json_to_sheet(dailySummary);
-                XLSX.utils.book_append_sheet(wb, ws, "Daily");
+                XLSX.utils.book_append_sheet(wb, ws, "Daily Summary");
                 XLSX.writeFile(wb, "Poker_Data.xlsx");
             }
-        };
-    </script>
+        }));
+    });
+</script>
 </body>
 </html>
