@@ -1,9 +1,9 @@
 <script type="module">
-    // 1. Import Firebase และฟังก์ชันที่จำเป็น
+    // 1. Import Firebase SDK
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-    // Your web app's Firebase configuration
+    // 2. Firebase Config (ใช้ค่าเดิมของนาย)
     const firebaseConfig = {
         apiKey: "AIzaSyBLH6kay1-t5PLolNPzoRRT28WxJOs4jV8",
         authDomain: "pokeracc-b7732.firebaseapp.com",
@@ -15,11 +15,11 @@
         measurementId: "G-8BRPSXWQTE"
     };
 
-    // Initialize Firebase
+    // 3. Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // 2. ปรับแต่ง Alpine.js ให้คุยกับ Firebase
+    // 4. ผูกฟังก์ชันเข้ากับ Window เพื่อให้ Alpine.js เรียกใช้งานได้
     window.pokerApp = function() {
         return {
             currentDate: new Date().toISOString().split('T')[0],
@@ -27,12 +27,17 @@
             currentSession: { players: [], rake: 0 },
 
             init() {
-                // ดึงข้อมูลจาก Firebase แบบ Real-time
+                // ฟังข้อมูลจาก Firebase แบบ Real-time
                 const dbRef = ref(db, 'poker_db');
                 onValue(dbRef, (snapshot) => {
                     const data = snapshot.val();
                     if (data) {
+                        // อัปเดตข้อมูลทั้งหมดจาก Cloud ลงเครื่อง
                         this.allData = data;
+                        this.loadSession();
+                    } else {
+                        // ถ้ายังไม่มีข้อมูลใน Cloud ให้เริ่มด้วยค่าว่าง
+                        this.allData = {};
                         this.loadSession();
                     }
                 });
@@ -46,15 +51,21 @@
                 this.loadSession(); 
             },
 
-            // ฟังก์ชันบันทึกข้อมูลไปที่ Firebase
+            // บันทึกข้อมูลขึ้น Cloud
             save() {
-                this.allData[this.currentDate] = this.currentSession;
-                set(ref(db, 'poker_db'), this.allData); // ส่งข้อมูลขึ้น Cloud ทันที
+                // อัปเดตข้อมูลวันที่ปัจจุบันเข้าไปในก้อนใหญ่
+                this.allData[this.currentDate] = JSON.parse(JSON.stringify(this.currentSession));
+                // ยิงขึ้น Firebase
+                set(ref(db, 'poker_db'), this.allData);
             },
 
             addPlayer() {
                 if (!this.currentSession.players) this.currentSession.players = [];
-                this.currentSession.players.push({ name: '', buyins: [{ amount: 0, isPaid: false }], cashout: 0 });
+                this.currentSession.players.push({ 
+                    name: '', 
+                    buyins: [{ amount: 0, isPaid: false }], 
+                    cashout: 0 
+                });
                 this.save();
             },
 
@@ -66,6 +77,7 @@
             },
 
             addBuyin(pIdx) {
+                if (!this.currentSession.players[pIdx].buyins) this.currentSession.players[pIdx].buyins = [];
                 this.currentSession.players[pIdx].buyins.push({ amount: 0, isPaid: false });
                 this.save();
             },
@@ -99,7 +111,7 @@
             getCustomerHistory() {
                 const history = {};
                 Object.values(this.allData).forEach(session => {
-                    if (!session.players) return;
+                    if (!session || !session.players) return;
                     session.players.forEach(p => {
                         if (!p.name) return;
                         const name = p.name.trim();
