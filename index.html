@@ -3,16 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PokerAccount Pro - Management System</title>
+    <title>PokerAccount Pro - Staff System (Backup Enabled)</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         [x-cloak] { display: none !important; }
         input[type=number]::-webkit-inner-spin-button, 
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        .backup-status { animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
-<body class="bg-[#f8fafc] min-h-screen font-sans text-slate-900" x-data="pokerApp()" x-init="init()">
+<body class="bg-[#f1f5f9] min-h-screen font-sans text-slate-900" x-data="pokerApp()" x-init="init()">
 
     <nav class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
         <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -20,55 +22,66 @@
                 <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black shadow-lg">P</div>
                 <div>
                     <span class="font-bold text-lg block leading-none">PokerAccount</span>
-                    <span class="text-[10px] text-emerald-500 font-bold uppercase tracking-widest">● Staff Dashboard</span>
+                    <div class="flex items-center gap-1">
+                        <span class="text-[10px] text-emerald-500 font-bold uppercase tracking-widest">● Database Live</span>
+                        <span class="text-[10px] text-slate-300">|</span>
+                        <span class="text-[10px] text-indigo-500 font-bold uppercase tracking-widest backup-status">Auto-Backup ON</span>
+                    </div>
                 </div>
             </div>
-            <div class="flex items-center gap-3">
-                <button @click="exportAllDataToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition shadow-md flex items-center gap-2">
-                    <span>📊 Export Full Excel</span>
+            
+            <div class="flex items-center gap-2">
+                <button @click="backupRawData()" title="สำรองไฟล์ฐานข้อมูลดิบ" class="bg-slate-700 hover:bg-slate-800 text-white px-3 py-2.5 rounded-xl text-sm font-bold transition flex items-center gap-2">
+                    <span>💾 Backup JSON</span>
                 </button>
-                <input type="date" x-model="currentDate" @change="changeDate" class="border-slate-200 rounded-xl text-sm font-bold text-indigo-600 focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-sm">
+                <button @click="exportAllDataToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2.5 rounded-xl text-sm font-bold transition shadow-md flex items-center gap-2">
+                    <span>📊 Export Excel</span>
+                </button>
+                <input type="date" x-model="currentDate" @change="changeDate" class="border-slate-200 rounded-xl text-sm font-bold text-indigo-600 cursor-pointer shadow-sm">
             </div>
         </div>
     </nav>
 
     <main class="max-w-7xl mx-auto px-4 py-8">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 border-b-4 border-b-indigo-500 text-center">
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 border-b-4 border-b-indigo-500">
                 <p class="text-xs font-bold text-slate-400 uppercase mb-1">Total Buy-in</p>
                 <p class="text-3xl font-black text-slate-800" x-text="formatMoney(getTotalBuyin())"></p>
             </div>
-            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 border-b-4 border-b-rose-500 text-center">
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 border-b-4 border-b-rose-500">
                 <p class="text-xs font-bold text-slate-400 uppercase mb-1">Total Cash-out</p>
                 <p class="text-3xl font-black text-slate-800" x-text="formatMoney(getTotalCashout())"></p>
             </div>
-            <div class="bg-slate-900 p-6 rounded-3xl shadow-xl text-white border-b-4 border-b-emerald-500 text-center">
-                <p class="text-xs font-bold text-slate-400 uppercase mb-1">Rake (Profit)</p>
-                <input type="number" x-model.number="currentSession.rake" @input.debounce.750ms="save" class="bg-transparent border-none p-0 text-3xl font-black focus:ring-0 w-full text-center placeholder-slate-700" placeholder="0">
+            <div class="bg-slate-900 p-6 rounded-3xl shadow-xl text-white border-b-4 border-b-emerald-500">
+                <p class="text-xs font-bold text-slate-400 uppercase mb-1">Rake (House Profit)</p>
+                <div class="flex items-center gap-2">
+                    <span class="text-emerald-500 font-black text-3xl">฿</span>
+                    <input type="number" x-model.number="currentSession.rake" @input.debounce.750ms="save" class="bg-transparent border-none p-0 text-3xl font-black focus:ring-0 w-full placeholder-slate-700 text-white" placeholder="0">
+                </div>
             </div>
         </div>
 
-        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden mb-8">
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
             <div class="p-6 border-b border-slate-50 flex justify-between items-center">
-                <h2 class="font-black text-slate-800 uppercase text-lg">Daily Players Table</h2>
-                <button @click="addPlayer()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold transition shadow-lg">+ Add Player Manually</button>
+                <h2 class="font-black text-slate-800 uppercase text-lg">Players List</h2>
+                <button @click="addPlayer()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-lg transition">+ New Player</button>
             </div>
             
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm">
                     <thead class="bg-slate-50 text-slate-400 font-bold text-[10px] uppercase tracking-widest">
                         <tr>
-                            <th class="px-6 py-4">Player Name</th>
-                            <th class="px-6 py-4">Buy-ins Detail</th>
-                            <th class="px-6 py-4 text-right">Total</th>
+                            <th class="px-6 py-4">Player</th>
+                            <th class="px-6 py-4">Buy-ins (สแกน 🖼️ เพื่อดูสลิป)</th>
+                            <th class="px-6 py-4 text-right">Total Buy-in</th>
                             <th class="px-6 py-4 text-center">Cash-out</th>
-                            <th class="px-6 py-4 text-right">Profit/Loss</th>
+                            <th class="px-6 py-4 text-right">Net Profit</th>
                             <th class="px-6 py-4"></th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-50">
                         <template x-for="(player, pIndex) in currentSession.players" :key="pIndex">
-                            <tr class="hover:bg-slate-50 transition">
+                            <tr class="hover:bg-slate-50/50 group transition">
                                 <td class="px-6 py-4 align-top">
                                     <input type="text" x-model="player.name" @input.debounce.750ms="save" class="font-bold border-none p-0 focus:ring-0 bg-transparent w-full text-slate-700" placeholder="Name">
                                 </td>
@@ -79,19 +92,19 @@
                                                 <input type="number" x-model.number="bi.amount" @input.debounce.750ms="save" class="bg-transparent border-none text-xs w-16 px-2 py-1.5 focus:ring-0 font-bold" placeholder="0">
                                                 
                                                 <template x-if="bi.slip && bi.slip !== 'Cash'">
-                                                    <button @click="window.open().document.write('<img src=\''+bi.slip+'\' style=\'max-width:100%\'>')" class="px-1 text-emerald-500" title="ดูสลิป">🖼️</button>
+                                                    <button @click="openSlip(bi.slip)" class="px-1 text-emerald-500 hover:scale-125 transition" title="ดูสลิป">🖼️</button>
                                                 </template>
 
                                                 <input type="checkbox" x-model="bi.isPaid" @change="save" class="w-4 h-4 accent-indigo-600 rounded cursor-pointer mr-1">
-                                                <button @click="removeBuyin(pIndex, bIndex)" class="text-rose-400 px-1">×</button>
+                                                <button @click="removeBuyin(pIndex, bIndex)" class="text-rose-300 hover:text-rose-500 px-1">×</button>
                                             </div>
                                         </template>
-                                        <button @click="addBuyin(pIndex)" class="text-indigo-600 text-[10px] font-bold">+ Add</button>
+                                        <button @click="addBuyin(pIndex)" class="text-indigo-600 text-[10px] font-black px-2">+ Add</button>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 align-top text-right font-bold text-slate-500" x-text="formatMoney(sumPlayerBuyin(player))"></td>
                                 <td class="px-6 py-4 align-top text-center">
-                                    <input type="number" x-model.number="player.cashout" @input.debounce.750ms="save" class="border border-slate-200 rounded-xl px-2 py-1.5 w-24 text-center font-black transition shadow-sm focus:ring-2 focus:ring-indigo-500" placeholder="0">
+                                    <input type="number" x-model.number="player.cashout" @input.debounce.750ms="save" class="border border-slate-200 rounded-xl px-2 py-1.5 w-24 text-center font-black transition focus:ring-2 focus:ring-indigo-500" placeholder="0">
                                 </td>
                                 <td class="px-6 py-4 align-top text-right font-black" :class="player.cashout - sumPlayerBuyin(player) >= 0 ? 'text-emerald-600' : 'text-rose-600'">
                                     <span x-text="formatMoney(player.cashout - sumPlayerBuyin(player))"></span>
@@ -124,7 +137,6 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // Export ฟังก์ชันให้ Alpine เข้าถึงได้
         window.pokerApp = function() {
             return {
                 currentDate: new Date().toISOString().split('T')[0],
@@ -132,12 +144,22 @@
                 currentSession: { players: [], rake: 0 },
 
                 init() {
+                    // 1. ลองโหลดจาก LocalStorage ก่อน (สำรองกรณีเน็ตหลุด)
+                    const localBackup = localStorage.getItem('poker_all_data');
+                    if (localBackup) {
+                        this.allData = JSON.parse(localBackup);
+                        this.loadSession();
+                    }
+
+                    // 2. ดึงจาก Firebase (ตัวจริง)
                     const dbRef = ref(db, 'poker_db');
                     onValue(dbRef, (snapshot) => {
                         const data = snapshot.val();
                         if (data) {
                             this.allData = data;
                             this.loadSession();
+                            // อัปเดตสำรองในเครื่องทุกครั้งที่มีข้อมูลใหม่จากคลาวด์
+                            localStorage.setItem('poker_all_data', JSON.stringify(data));
                         }
                     });
                 },
@@ -149,8 +171,72 @@
                 changeDate() { this.loadSession(); },
 
                 save() {
+                    // ทำความสะอาดข้อมูลก่อนเซฟ
                     this.allData[this.currentDate] = JSON.parse(JSON.stringify(this.currentSession));
-                    set(ref(db, 'poker_db'), this.allData);
+                    
+                    // สำรองข้อมูลลง LocalStorage ทันที
+                    localStorage.setItem('poker_all_data', JSON.stringify(this.allData));
+                    
+                    // ส่งขึ้น Firebase
+                    set(ref(db, 'poker_db'), this.allData).catch(err => {
+                        console.error("Firebase Save Error:", err);
+                        alert("บันทึกลง Cloud ไม่สำเร็จ แต่ข้อมูลถูกสำรองไว้ในเครื่องแล้ว");
+                    });
+                },
+
+                // ฟังก์ชันเปิดสลิปในหน้าต่างใหม่
+                openSlip(base64) {
+                    const win = window.open();
+                    win.document.write(`<title>View Slip</title><img src="${base64}" style="max-width:100%">`);
+                },
+
+                // 💾 ระบบดาวน์โหลดไฟล์สำรองข้อมูลดิบ
+                backupRawData() {
+                    try {
+                        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.allData, null, 2));
+                        const dlAnchorElement = document.createElement('a');
+                        dlAnchorElement.setAttribute("href", dataStr);
+                        dlAnchorElement.setAttribute("download", `poker_db_backup_${this.currentDate}_${new Date().getTime()}.json`);
+                        dlAnchorElement.click();
+                        dlAnchorElement.remove();
+                    } catch (e) {
+                        alert("Backup Failed: " + e.message);
+                    }
+                },
+
+                // 📊 ระบบ Export Excel แยก Sheet
+                exportAllDataToExcel() {
+                    try {
+                        const wb = XLSX.utils.book_new();
+
+                        // 1. หน้าสรุปภาพรวม
+                        const summaryData = Object.keys(this.allData).sort().reverse().map(d => {
+                            const s = this.allData[d];
+                            const players = s.players || [];
+                            const tIn = players.reduce((sum, p) => sum + this.sumPlayerBuyin(p), 0);
+                            const tOut = players.reduce((sum, p) => sum + (Number(p.cashout) || 0), 0);
+                            return { 
+                                "วันที่": d, "ผู้เล่น": players.length, "Buy-in": tIn, "Cash-out": tOut, "Rake": s.rake || 0, "Balance": tIn - (tOut + (s.rake || 0))
+                            };
+                        });
+                        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summaryData), "Overview");
+
+                        // 2. แยกหน้าตามวัน
+                        Object.keys(this.allData).sort().reverse().forEach(date => {
+                            const session = this.allData[date];
+                            const pList = (session.players || []).map(p => ({
+                                "ชื่อผู้เล่น": p.name,
+                                "ยอด Buy-in": this.sumPlayerBuyin(p),
+                                "ยอด Cash-out": Number(p.cashout) || 0,
+                                "กำไร/ขาดทุน": (Number(p.cashout) || 0) - this.sumPlayerBuyin(p)
+                            }));
+                            pList.push({}); // บรรทัดว่าง
+                            pList.push({ "ชื่อผู้เล่น": "สรุป Rake", "ยอด Buy-in": session.rake || 0 });
+                            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(pList), date);
+                        });
+
+                        XLSX.writeFile(wb, `Poker_Complete_Report_${this.currentDate}.xlsx`);
+                    } catch (e) { alert("Excel Export Failed"); }
                 },
 
                 addPlayer() {
@@ -160,10 +246,7 @@
                 },
 
                 removePlayer(index) {
-                    if(confirm('Delete Player?')) { 
-                        this.currentSession.players.splice(index, 1); 
-                        this.save(); 
-                    }
+                    if(confirm('ลบผู้เล่นคนนี้?')) { this.currentSession.players.splice(index, 1); this.save(); }
                 },
 
                 addBuyin(pIdx) {
@@ -177,45 +260,13 @@
                     this.save();
                 },
 
-                sumPlayerBuyin(p) { 
-                    if (!p.buyins) return 0;
-                    return p.buyins.reduce((s, b) => s + (Number(b.amount) || 0), 0); 
-                },
-                
-                getTotalBuyin() { 
-                    if (!this.currentSession.players) return 0;
-                    return this.currentSession.players.reduce((s, p) => s + this.sumPlayerBuyin(p), 0); 
-                },
-                
-                getTotalCashout() { 
-                    if (!this.currentSession.players) return 0;
-                    return this.currentSession.players.reduce((s, p) => s + (Number(p.cashout) || 0), 0); 
-                },
-                
-                formatMoney(v) { return new Intl.NumberFormat('th-TH').format(v); },
-
-                exportAllDataToExcel() {
-                    try {
-                        const wb = XLSX.utils.book_new();
-                        // Overview Sheet
-                        const summary = Object.keys(this.allData).map(d => ({ วันที่: d, Rake: this.allData[d].rake || 0 }));
-                        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summary), "Overview");
-                        
-                        // Current Date Sheet
-                        const currentDayData = (this.currentSession.players || []).map(p => ({
-                            ชื่อ: p.name,
-                            Buyin: this.sumPlayerBuyin(p),
-                            Cashout: p.cashout
-                        }));
-                        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(currentDayData), this.currentDate);
-                        
-                        XLSX.writeFile(wb, `Poker_Report_${this.currentDate}.xlsx`);
-                    } catch (e) { alert("Error Exporting"); }
-                }
+                sumPlayerBuyin(p) { return (p.buyins || []).reduce((s, b) => s + (Number(b.amount) || 0), 0); },
+                getTotalBuyin() { return (this.currentSession.players || []).reduce((s, p) => s + this.sumPlayerBuyin(p), 0); },
+                getTotalCashout() { return (this.currentSession.players || []).reduce((s, p) => s + (Number(p.cashout) || 0), 0); },
+                formatMoney(v) { return new Intl.NumberFormat('th-TH').format(v); }
             };
-        };
+        }
     </script>
-
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 </body>
 </html>
