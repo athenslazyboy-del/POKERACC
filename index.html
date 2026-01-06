@@ -3,126 +3,181 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AJ POKER CLUB - Staff System</title>
+    <title>AJ POKER - Professional Minimal</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
         [x-cloak] { display: none !important; }
         input[type=number]::-webkit-inner-spin-button, 
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        .backup-status { animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        
+        .card-minimal { background: white; border: 1px solid #e2e8f0; border-radius: 16px; }
+        
+        /* สถานะยังไม่จ่าย: สีแดงนวล */
+        .unpaid-alert { 
+            background-color: #fff1f2; 
+            border: 1px solid #fecaca; 
+            color: #e11d48;
+            animation: soft-pulse 2s infinite;
+        }
+        @keyframes soft-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.8; } }
+        
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
     </style>
 </head>
-<body class="bg-[#0f172a] min-h-screen font-sans text-slate-200" x-data="pokerApp()" x-init="init()">
+<body x-data="pokerApp()" x-init="init()">
 
-    <nav class="bg-[#1e293b] border-b border-slate-700 sticky top-0 z-30 shadow-2xl">
-        <div class="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
-            <div class="flex items-center gap-4">
-                <div class="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center text-white font-black shadow-lg overflow-hidden border-2 border-indigo-400">
-                    <img src="logo.jpg" alt="LOGO" class="w-full h-full object-cover">
+    <template x-if="!isLoggedIn">
+        <div class="fixed inset-0 z-[100] bg-white flex items-center justify-center px-4">
+            <div class="w-full max-w-sm text-center">
+                <div class="text-4xl font-extrabold text-black mb-8 tracking-tighter italic">AJ POKER.</div>
+                <div class="card-minimal p-10 shadow-xl border border-slate-100">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-8">Management Access</p>
+                    <div class="space-y-4">
+                        <input type="password" x-model="inputPass" @keyup.enter="login()" 
+                            class="w-full bg-slate-50 border-none rounded-2xl px-4 py-4 text-center text-black font-bold tracking-[0.5em] focus:ring-2 focus:ring-black transition-all outline-none"
+                            placeholder="••••">
+                        <button @click="login()" 
+                            class="w-full bg-black text-white font-bold py-4 rounded-2xl shadow-lg hover:bg-slate-800 transition-all active:scale-95 text-sm uppercase tracking-widest">
+                            Sign In
+                        </button>
+                    </div>
+                    <p x-show="error" x-text="error" class="text-red-500 text-xs font-bold mt-6 animate-pulse"></p>
                 </div>
-                <div>
-                    <span class="font-black text-2xl block leading-none text-white tracking-tighter">AJ POKER CLUB Account </span>
-                    <div class="flex items-center gap-2 mt-1">
-                        <span class="text-[10px] text-emerald-400 font-bold uppercase tracking-widest flex items-center gap-1">
-                            <span class="w-2 h-2 bg-emerald-400 rounded-full animate-ping"></span> Live System
-                        </span>
-                        <span class="text-[10px] text-slate-500">|</span>
-                        <span class="text-[10px] text-indigo-400 font-bold uppercase tracking-widest backup-status">Auto-Backup ON</span>
+            </div>
+        </div>
+    </template>
+
+    <div x-show="isLoggedIn" x-cloak>
+        <nav class="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-30">
+            <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <span class="font-extrabold text-xl tracking-tighter text-black uppercase">AJ POKER.</span>
+                    <button @click="logout()" class="text-[10px] text-slate-400 hover:text-red-500 uppercase font-black tracking-widest ml-2 transition">Logout</button>
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <div class="flex bg-slate-100 p-1 rounded-xl mr-2">
+                        <label class="text-[10px] font-black px-3 py-1.5 text-slate-500 hover:bg-white hover:text-black hover:shadow-sm rounded-lg transition cursor-pointer uppercase">
+                            Import
+                            <input type="file" @change="importRawData" accept=".json" class="hidden">
+                        </label>
+                        <button @click="backupRawData()" class="text-[10px] font-black px-3 py-1.5 text-slate-500 hover:bg-white hover:text-black hover:shadow-sm rounded-lg transition uppercase">Backup</button>
+                        <button @click="exportAllDataToExcel()" class="text-[10px] font-black px-3 py-1.5 text-red-500 hover:bg-white hover:shadow-sm rounded-lg transition uppercase">Excel</button>
+                    </div>
+                    <input type="date" x-model="currentDate" @change="changeDate" class="bg-white border border-slate-200 rounded-xl text-xs font-bold px-3 h-9 outline-none cursor-pointer">
+                </div>
+            </div>
+        </nav>
+
+        <main class="max-w-7xl mx-auto px-6 py-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                <div class="card-minimal p-6 shadow-sm border-b-4 border-b-slate-200">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Buy-In</p>
+                    <p class="text-2xl font-extrabold text-black" x-text="formatMoney(getTotalBuyin())"></p>
+                </div>
+
+                <div class="card-minimal p-6 shadow-sm border-b-4 border-b-slate-200">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Cash-Out</p>
+                    <p class="text-2xl font-extrabold text-black" x-text="formatMoney(getTotalCashout())"></p>
+                </div>
+
+                <div class="card-minimal p-6 shadow-sm border-b-4 border-b-red-500 bg-red-50/10">
+                    <p class="text-[10px] font-black text-red-500 uppercase tracking-widest mb-1 italic text-center text-center">Club Rake</p>
+                    <div class="flex items-center justify-center font-extrabold">
+                        <span class="text-red-500 text-xl mr-1">฿</span>
+                        <input type="number" x-model.number="currentSession.rake" @input.debounce.750ms="save" 
+                            class="bg-transparent border-none p-0 text-2xl focus:ring-0 w-24 text-red-600 text-center" placeholder="0">
                     </div>
                 </div>
-            </div>
-            
-            <div class="flex items-center gap-3">
-                <button @click="backupRawData()" title="สำรองไฟล์ฐานข้อมูลดิบ" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition flex items-center gap-2 border border-slate-600">
-                    <span>💾 Backup</span>
-                </button>
-                <button @click="exportAllDataToExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition shadow-lg flex items-center gap-2">
-                    <span>📊 Excel Report</span>
-                </button>
-                <input type="date" x-model="currentDate" @change="changeDate" class="bg-[#0f172a] border-slate-600 rounded-xl text-sm font-bold text-indigo-400 cursor-pointer shadow-sm focus:ring-indigo-500">
-            </div>
-        </div>
-    </nav>
 
-    <main class="max-w-7xl mx-auto px-4 py-8">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div class="bg-[#1e293b] p-6 rounded-3xl shadow-sm border border-slate-700 border-b-4 border-b-indigo-500">
-                <p class="text-[10px] font-bold text-slate-400 uppercase mb-1 tracking-widest">Total Buy-in</p>
-                <p class="text-3xl font-black text-white" x-text="formatMoney(getTotalBuyin())"></p>
-            </div>
-            <div class="bg-[#1e293b] p-6 rounded-3xl shadow-sm border border-slate-700 border-b-4 border-b-rose-500">
-                <p class="text-[10px] font-bold text-slate-400 uppercase mb-1 tracking-widest">Total Cash-out</p>
-                <p class="text-3xl font-black text-white" x-text="formatMoney(getTotalCashout())"></p>
-            </div>
-            <div class="bg-gradient-to-br from-indigo-600 to-indigo-800 p-6 rounded-3xl shadow-xl text-white border-b-4 border-b-emerald-400">
-                <p class="text-[10px] font-bold text-indigo-200 uppercase mb-1 tracking-widest font-black">Rake (House Profit)</p>
-                <div class="flex items-center gap-2">
-                    <span class="text-emerald-300 font-black text-3xl">฿</span>
-                    <input type="number" x-model.number="currentSession.rake" @input.debounce.750ms="save" class="bg-transparent border-none p-0 text-3xl font-black focus:ring-0 w-full placeholder-indigo-400 text-white" placeholder="0">
+                <div class="card-minimal p-6 shadow-sm border-b-4 transition-all duration-500"
+                    :class="Math.abs(getGap()) > 0 ? 'border-b-amber-500 bg-amber-50/30' : 'border-b-emerald-500 bg-emerald-50/30'">
+                    <p class="text-[10px] font-black uppercase tracking-widest mb-1"
+                        :class="Math.abs(getGap()) > 0 ? 'text-amber-600' : 'text-emerald-600'">
+                        System Gap <span x-show="getGap() === 0">✅</span>
+                    </p>
+                    <p class="text-2xl font-extrabold" 
+                        :class="Math.abs(getGap()) > 0 ? 'text-amber-600' : 'text-emerald-600'"
+                        x-text="formatMoney(getGap())"></p>
+                    <p class="text-[9px] font-bold text-slate-400 mt-1 uppercase">
+                        Current In-Hand: <span class="text-slate-600" x-text="formatMoney(getTotalBuyin() - getTotalCashout())"></span>
+                    </p>
                 </div>
             </div>
-        </div>
 
-        <div class="bg-[#1e293b] rounded-3xl shadow-2xl border border-slate-700 overflow-hidden">
-            <div class="p-6 border-b border-slate-700 flex justify-between items-center bg-[#1e293b]">
-                <h2 class="font-black text-white uppercase text-lg tracking-tight">Management Table</h2>
-                <button @click="addPlayer()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-lg transition border border-indigo-400">+ Add Player</button>
-            </div>
-            
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm">
-                    <thead class="bg-[#0f172a] text-slate-400 font-bold text-[10px] uppercase tracking-widest">
-                        <tr>
-                            <th class="px-6 py-4 font-black">Player</th>
-                            <th class="px-6 py-4 font-black text-center">Buy-ins Detail</th>
-                            <th class="px-6 py-4 text-right font-black">Total Buy-in</th>
-                            <th class="px-6 py-4 text-center font-black">Cash-out</th>
-                            <th class="px-6 py-4 text-right font-black">Net Profit</th>
-                            <th class="px-6 py-4"></th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-700">
-                        <template x-for="(player, pIndex) in currentSession.players" :key="pIndex">
-                            <tr class="hover:bg-slate-800/50 group transition">
-                                <td class="px-6 py-4 align-top">
-                                    <input type="text" x-model="player.name" @input.debounce.750ms="save" class="font-bold border-none p-0 focus:ring-0 bg-transparent w-full text-white placeholder-slate-600 text-lg" placeholder="Name">
-                                </td>
-                                <td class="px-6 py-4">
-                                    <div class="flex flex-wrap gap-2 justify-center">
-                                        <template x-for="(bi, bIndex) in player.buyins" :key="bIndex">
-                                            <div class="flex items-center bg-[#0f172a] rounded-xl pr-1 border border-slate-600 shadow-sm">
-                                                <input type="number" x-model.number="bi.amount" @input.debounce.750ms="save" class="bg-transparent border-none text-xs w-16 px-2 py-1.5 focus:ring-0 font-bold text-white" placeholder="0">
-                                                
-                                                <template x-if="bi.slip && bi.slip !== 'Cash'">
-                                                    <button @click="openSlip(bi.slip)" class="px-1 text-emerald-400 hover:scale-125 transition" title="ดูสลิป">🖼️</button>
-                                                </template>
-
-                                                <input type="checkbox" x-model="bi.isPaid" @change="save" class="w-4 h-4 accent-indigo-500 rounded cursor-pointer mr-1">
-                                                <button @click="removeBuyin(pIndex, bIndex)" class="text-rose-400/50 hover:text-rose-500 px-1 font-bold">×</button>
-                                            </div>
-                                        </template>
-                                        <button @click="addBuyin(pIndex)" class="bg-slate-700/50 hover:bg-slate-700 text-indigo-400 text-[10px] font-black px-3 py-1 rounded-lg transition">+ ADD</button>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4 align-top text-right font-bold text-slate-400 text-lg" x-text="formatMoney(sumPlayerBuyin(player))"></td>
-                                <td class="px-6 py-4 align-top text-center">
-                                    <input type="number" x-model.number="player.cashout" @input.debounce.750ms="save" class="bg-[#0f172a] border border-slate-600 rounded-xl px-2 py-1.5 w-24 text-center font-black transition focus:ring-2 focus:ring-indigo-500 text-white text-lg" placeholder="0">
-                                </td>
-                                <td class="px-6 py-4 align-top text-right font-black text-lg" :class="player.cashout - sumPlayerBuyin(player) >= 0 ? 'text-emerald-400' : 'text-rose-400'">
-                                    <span x-text="formatMoney(player.cashout - sumPlayerBuyin(player))"></span>
-                                </td>
-                                <td class="px-6 py-4 align-top text-center">
-                                    <button @click="removePlayer(pIndex)" class="text-slate-600 hover:text-rose-500 transition opacity-0 group-hover:opacity-100">🗑️</button>
-                                </td>
+            <div class="card-minimal overflow-hidden shadow-sm border-slate-200">
+                <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-white">
+                    <h2 class="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 italic font-bold">Floor Management</h2>
+                    <button @click="addPlayer()" class="bg-black text-white text-[10px] font-black px-6 py-3 rounded-full hover:bg-slate-800 transition-all shadow-md active:scale-95">
+                        + NEW PLAYER
+                    </button>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-widest border-b">
+                            <tr>
+                                <th class="px-8 py-5">Player Name</th>
+                                <th class="px-6 py-5 text-center">Buy-In Details</th>
+                                <th class="px-6 py-5 text-right">Total In</th>
+                                <th class="px-6 py-5 text-center">Cash-Out</th>
+                                <th class="px-6 py-5 text-right">P / L</th>
+                                <th class="px-8 py-5"></th>
                             </tr>
-                        </template>
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <template x-for="(player, pIndex) in currentSession.players" :key="pIndex">
+                                <tr class="hover:bg-slate-50/30 group transition">
+                                    <td class="px-8 py-6">
+                                        <input type="text" x-model="player.name" @input.debounce.750ms="save" class="bg-transparent border-none p-0 focus:ring-0 font-extrabold text-black placeholder-slate-200 w-full uppercase text-sm" placeholder="NAME">
+                                    </td>
+                                    <td class="px-6 py-6">
+                                        <div class="flex flex-wrap gap-2 justify-center">
+                                            <template x-for="(bi, bIndex) in player.buyins" :key="bIndex">
+                                                <div class="flex items-center rounded-full px-1 border transition-all h-9"
+                                                    :class="bi.isPaid ? 'bg-white border-slate-200 shadow-sm' : 'unpaid-alert'">
+                                                    
+                                                    <button @click="bi.method = (bi.method === 'Cash' ? 'Transfer' : 'Cash'); save()" 
+                                                        class="w-8 h-8 flex items-center justify-center text-xs" x-text="bi.method === 'Cash' ? '💰' : '📱'"></button>
+
+                                                    <input type="number" x-model.number="bi.amount" @input.debounce.750ms="save" 
+                                                        class="bg-transparent border-none text-[13px] w-16 px-1 focus:ring-0 font-extrabold text-center" placeholder="0">
+                                                    
+                                                    <template x-if="bi.method === 'Transfer' && bi.slip && bi.slip !== 'Cash'">
+                                                        <button @click="openSlip(bi.slip)" class="px-1 text-slate-400 hover:text-black">📎</button>
+                                                    </template>
+
+                                                    <input type="checkbox" x-model="bi.isPaid" @change="save" 
+                                                        class="w-4 h-4 rounded-full border-slate-300 accent-black mx-1 cursor-pointer">
+                                                    
+                                                    <button @click="removeBuyin(pIndex, bIndex)" class="text-slate-300 hover:text-red-500 pr-2 font-bold transition">×</button>
+                                                </div>
+                                            </template>
+                                            <button @click="addBuyin(pIndex)" class="w-9 h-9 flex items-center justify-center bg-slate-50 hover:bg-slate-200 text-slate-400 rounded-full transition text-lg">+</button>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-6 text-right font-bold text-slate-400 text-sm" x-text="formatMoney(sumPlayerBuyin(player))"></td>
+                                    <td class="px-6 py-6 text-center">
+                                        <input type="number" x-model.number="player.cashout" @input.debounce.750ms="save" class="bg-slate-50 border border-slate-200 rounded-xl px-2 py-2 w-28 text-center font-extrabold text-black focus:bg-white focus:ring-1 focus:ring-black outline-none transition text-sm" placeholder="0">
+                                    </td>
+                                    <td class="px-6 py-6 text-right font-extrabold text-base" :class="player.cashout - sumPlayerBuyin(player) >= 0 ? 'text-black' : 'text-red-500'">
+                                        <span x-text="formatMoney(player.cashout - sumPlayerBuyin(player))"></span>
+                                    </td>
+                                    <td class="px-8 py-6 text-center">
+                                        <button @click="removePlayer(pIndex)" class="text-slate-200 hover:text-red-500 transition opacity-0 group-hover:opacity-100">🗑️</button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </div>
-    </main>
+        </main>
+    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -143,100 +198,96 @@
 
         window.pokerApp = function() {
             return {
+                isLoggedIn: sessionStorage.getItem('aj_auth') === 'true',
+                inputPass: '',
+                correctPass: '1234',
+                error: '',
                 currentDate: new Date().toISOString().split('T')[0],
                 allData: {},
                 currentSession: { players: [], rake: 0 },
 
+                login() {
+                    if (this.inputPass === this.correctPass) {
+                        this.isLoggedIn = true;
+                        sessionStorage.setItem('aj_auth', 'true');
+                        this.error = '';
+                    } else { this.error = 'Password Error'; this.inputPass = ''; }
+                },
+                logout() { this.isLoggedIn = false; sessionStorage.removeItem('aj_auth'); },
                 init() {
-                    const localBackup = localStorage.getItem('poker_all_data');
-                    if (localBackup) {
-                        this.allData = JSON.parse(localBackup);
-                        this.loadSession();
-                    }
-
-                    const dbRef = ref(db, 'poker_db');
-                    onValue(dbRef, (snapshot) => {
+                    onValue(ref(db, 'poker_db'), (snapshot) => {
                         const data = snapshot.val();
-                        if (data) {
-                            this.allData = data;
-                            this.loadSession();
+                        if (data) { 
+                            this.allData = data; 
+                            this.loadSession(); 
                             localStorage.setItem('poker_all_data', JSON.stringify(data));
                         }
                     });
                 },
-
                 loadSession() {
                     this.currentSession = this.allData[this.currentDate] || { players: [], rake: 0 };
                 },
-
                 changeDate() { this.loadSession(); },
-
                 save() {
                     this.allData[this.currentDate] = JSON.parse(JSON.stringify(this.currentSession));
-                    localStorage.setItem('poker_all_data', JSON.stringify(this.allData));
-                    set(ref(db, 'poker_db'), this.allData);
+                    if(this.isLoggedIn) set(ref(db, 'poker_db'), this.allData);
                 },
-
+                getGap() {
+                    const totalIn = this.getTotalBuyin();
+                    const totalOut = this.getTotalCashout();
+                    const rake = Number(this.currentSession.rake) || 0;
+                    return totalIn - (totalOut + rake);
+                },
                 openSlip(base64) {
                     const win = window.open();
-                    win.document.write(`<title>AJ POKER - View Slip</title><body style="margin:0;background:#0f172a;display:flex;justify-content:center;"><img src="${base64}" style="max-height:100vh;"></body>`);
+                    win.document.write(`<body style="margin:0;display:flex;justify-content:center;background:#000;"><img src="${base64}" style="max-height:100vh;"></body>`);
                 },
-
                 backupRawData() {
                     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.allData, null, 2));
                     const dl = document.createElement('a');
                     dl.setAttribute("href", dataStr);
-                    dl.setAttribute("download", `AJ_POKER_BACKUP_${this.currentDate}.json`);
+                    dl.setAttribute("download", `AJ_BACKUP_${this.currentDate}.json`);
                     dl.click();
                 },
-
-                exportAllDataToExcel() {
-                    try {
-                        const wb = XLSX.utils.book_new();
-                        const summaryData = Object.keys(this.allData).sort().reverse().map(d => {
-                            const s = this.allData[d];
-                            const players = s.players || [];
-                            const tIn = players.reduce((sum, p) => sum + this.sumPlayerBuyin(p), 0);
-                            const tOut = players.reduce((sum, p) => sum + (Number(p.cashout) || 0), 0);
-                            return { "วันที่": d, "Rake": s.rake || 0, "Buy-in": tIn, "Cash-out": tOut };
-                        });
-                        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summaryData), "Club_Overview");
-                        
-                        Object.keys(this.allData).sort().reverse().forEach(date => {
-                            const session = this.allData[date];
-                            const pList = (session.players || []).map(p => ({
-                                "Player": p.name,
-                                "Buy-in": this.sumPlayerBuyin(p),
-                                "Cash-out": Number(p.cashout) || 0,
-                                "Profit/Loss": (Number(p.cashout) || 0) - this.sumPlayerBuyin(p)
-                            }));
-                            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(pList), date);
-                        });
-                        XLSX.writeFile(wb, `AJ_POKER_CLUB_REPORT.xlsx`);
-                    } catch (e) { alert("Excel Export Error"); }
+                importRawData(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+                    if (!confirm("⚠️ นำเข้าข้อมูลใหม่จะทับข้อมูลเดิมทั้งหมดบนคลาวด์?")) return;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const imported = JSON.parse(e.target.result);
+                            if (imported) {
+                                this.allData = imported;
+                                this.loadSession();
+                                this.save();
+                                alert("✅ Import Success");
+                            }
+                        } catch (err) { alert("❌ File Error"); }
+                    };
+                    reader.readAsText(file);
                 },
-
+                exportAllDataToExcel() {
+                    const wb = XLSX.utils.book_new();
+                    const summary = Object.keys(this.allData).map(d => ({ 
+                        Date: d, 
+                        Rake: this.allData[d].rake || 0,
+                        Balance_Check: (this.allData[d].players || []).length + " players"
+                    }));
+                    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summary), "Overview");
+                    XLSX.writeFile(wb, `AJ_POKER_REPORT.xlsx`);
+                },
                 addPlayer() {
                     if (!this.currentSession.players) this.currentSession.players = [];
-                    this.currentSession.players.push({ name: '', buyins: [{ amount: 0, isPaid: false }], cashout: 0 });
+                    this.currentSession.players.push({ name: '', buyins: [{ amount: 0, isPaid: false, method: 'Cash' }], cashout: 0 });
                     this.save();
                 },
-
-                removePlayer(index) {
-                    if(confirm('Delete Player?')) { this.currentSession.players.splice(index, 1); this.save(); }
-                },
-
+                removePlayer(index) { if(confirm('Delete?')) { this.currentSession.players.splice(index, 1); this.save(); } },
                 addBuyin(pIdx) {
-                    if (!this.currentSession.players[pIdx].buyins) this.currentSession.players[pIdx].buyins = [];
-                    this.currentSession.players[pIdx].buyins.push({ amount: 0, isPaid: false });
+                    this.currentSession.players[pIdx].buyins.push({ amount: 0, isPaid: false, method: 'Cash' });
                     this.save();
                 },
-
-                removeBuyin(pIdx, bIdx) {
-                    this.currentSession.players[pIdx].buyins.splice(bIdx, 1);
-                    this.save();
-                },
-
+                removeBuyin(pIdx, bIdx) { this.currentSession.players[pIdx].buyins.splice(bIdx, 1); this.save(); },
                 sumPlayerBuyin(p) { return (p.buyins || []).reduce((s, b) => s + (Number(b.amount) || 0), 0); },
                 getTotalBuyin() { return (this.currentSession.players || []).reduce((s, p) => s + this.sumPlayerBuyin(p), 0); },
                 getTotalCashout() { return (this.currentSession.players || []).reduce((s, p) => s + (Number(p.cashout) || 0), 0); },
